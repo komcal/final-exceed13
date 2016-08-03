@@ -8,6 +8,7 @@
 #define SOUND A1
 #define TEMP A2
 #define GAS A4
+#define BUZZER 10
 
 struct pt pt_taskSmoke;
 struct pt pt_taskSound;
@@ -15,6 +16,7 @@ struct pt pt_taskGas;
 struct pt pt_taskSerialEvent;
 struct pt pt_taskSendSerial;
 struct pt pt_taskTemp;
+struct pt pt_taskBeep;
 
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 String dataToServer = "";
@@ -58,9 +60,15 @@ PT_THREAD(taskSmoke(struct pt* pt)) {
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1) {
-    //lcd.clear();
+    lcd.clear();
     smokeData = analogRead(SMOKE);
-    //lcd.print(smokeData);
+    lcd.print(smokeData);
+    if (smokeData > 50) {
+      analogWrite(BUZZER, 100);
+    }
+    else {
+      analogWrite(BUZZER, 0);
+    }
     PT_DELAY(pt, 500, ts);
     PT_YIELD(pt);
   }
@@ -71,9 +79,9 @@ PT_THREAD(taskGas(struct pt* pt)) {
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1) {
-    lcd.clear();
+    //lcd.clear();
     gasData = analogRead(GAS);
-    lcd.print(gasData);
+    //lcd.print(gasData);
     PT_DELAY(pt, 500, ts);
     PT_YIELD(pt);
   }
@@ -103,7 +111,11 @@ PT_THREAD(taskSerialEvent(struct pt* pt)){
       str.replace("\r","");
       str.replace("\n","");
       Serial.println(str);
-      if(str != "") recieveData = str;
+      if(str != "" && str.indexOf("/") < 0) {
+        recieveData = str;
+        taskBeep(&pt_taskBeep);
+      }
+
     }
     if(Serial.available()) {
       recieveData = Serial.readStringUntil('\r');
@@ -122,6 +134,27 @@ PT_THREAD(taskSendSerial(struct pt* pt)){
   }
   PT_END(pt);
 }
+
+PT_THREAD(taskBeep(struct pt* pt)) {
+  static uint32_t ts;
+  PT_BEGIN(pt);
+  tone(BUZZER, 800,2000);
+  delay(1000);
+  noTone(BUZZER);
+  tone(BUZZER, 800,2000);
+  delay(1000);
+  noTone(BUZZER);
+  tone(BUZZER, 800,2000);
+  delay(1000);
+  noTone(BUZZER);
+  // delay(1000);
+  // tone(BUZZER, 50,noteDuration);
+  // delay(1000);
+  // noTone(BUZZER);
+  // delay(1000);
+  PT_END(pt);
+}
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -134,6 +167,7 @@ void setup() {
   PT_INIT(&pt_taskSmoke);
   PT_INIT(&pt_taskGas);
   PT_INIT(&pt_taskTemp);
+  PT_INIT(&pt_taskBeep);
 }
 
 void loop() {
