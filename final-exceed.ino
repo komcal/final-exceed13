@@ -7,7 +7,7 @@
 #define SMOKE A0
 #define SOUND A1
 #define TEMP A2
-#define GAS A5
+#define GAS A4
 
 struct pt pt_taskSmoke;
 struct pt pt_taskSound;
@@ -71,9 +71,9 @@ PT_THREAD(taskGas(struct pt* pt)) {
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1) {
-    //lcd.clear();
+    lcd.clear();
     gasData = analogRead(GAS);
-    //lcd.print(gasData);
+    lcd.print(gasData);
     PT_DELAY(pt, 500, ts);
     PT_YIELD(pt);
   }
@@ -84,10 +84,10 @@ PT_THREAD(taskTemp(struct pt* pt)) {
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1) {
-    lcd.clear();
+    //lcd.clear();
     temp = analogRead(TEMP);
     tempData = (temp*25-2050)/100;
-    lcd.print(tempData);
+    //lcd.print(tempData);
     PT_DELAY(pt, 500, ts);
     PT_YIELD(pt);
   }
@@ -117,7 +117,7 @@ PT_THREAD(taskSendSerial(struct pt* pt)){
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1){
-    Serial1.println(recieveData+","+name+","+tempData+","+people+","+humidData+","+height+","+String(smokeData)+","+gasData);
+    Serial1.println(name+","+tempData+","+people+","+humidData+","+height+","+String(smokeData)+","+gasData);
     PT_DELAY(pt, 500, ts);
   }
   PT_END(pt);
@@ -142,6 +142,6 @@ void loop() {
   taskSendSerial(&pt_taskSendSerial);
   taskSound(&pt_taskSound);
   taskSmoke(&pt_taskSmoke);
-  //taskGas(&pt_taskGas);
+  taskGas(&pt_taskGas);
   taskTemp(&pt_taskTemp);
 }
