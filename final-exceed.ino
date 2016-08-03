@@ -9,6 +9,7 @@
 #define TEMP A2
 #define GAS A4
 #define BUZZER 10
+#define BTN 2
 
 struct pt pt_taskSmoke;
 struct pt pt_taskSound;
@@ -17,6 +18,7 @@ struct pt pt_taskSerialEvent;
 struct pt pt_taskSendSerial;
 struct pt pt_taskTemp;
 struct pt pt_taskBeep;
+struct pt pt_taskHumid;
 
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 String dataToServer = "";
@@ -26,10 +28,11 @@ int soundData = 0;
 int tempData = 0;
 String people = "";
 String name = "Bangkok%20saimai%201111";
-int humidData = 0;
+int humidData = 20;
 int height = 0;
 int gasData = 0;
 int temp;
+int sw;
 
 PT_THREAD(taskSound(struct pt* pt)) {
   static uint32_t ts;
@@ -60,9 +63,9 @@ PT_THREAD(taskSmoke(struct pt* pt)) {
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1) {
-    lcd.clear();
+    //lcd.clear();
     smokeData = analogRead(SMOKE);
-    lcd.print(smokeData);
+    //lcd.print(smokeData);
     if (smokeData > 50) {
       analogWrite(BUZZER, 100);
     }
@@ -83,6 +86,23 @@ PT_THREAD(taskGas(struct pt* pt)) {
     gasData = analogRead(GAS);
     //lcd.print(gasData);
     PT_DELAY(pt, 500, ts);
+    PT_YIELD(pt);
+  }
+  PT_END(pt);
+}
+
+PT_THREAD(taskHumid(struct pt* pt)) {
+  static uint32_t ts;
+  PT_BEGIN(pt);
+  while (1) {
+    lcd.clear();
+    sw = digitalRead(BTN);
+    if (sw == 0) {
+      if(humidData == 20) humidData = 70;
+      else humidData = 20;
+    }
+    lcd.print(humidData);
+    PT_DELAY(pt, 700, ts);
     PT_YIELD(pt);
   }
   PT_END(pt);
@@ -147,11 +167,6 @@ PT_THREAD(taskBeep(struct pt* pt)) {
   tone(BUZZER, 800,2000);
   delay(1000);
   noTone(BUZZER);
-  // delay(1000);
-  // tone(BUZZER, 50,noteDuration);
-  // delay(1000);
-  // noTone(BUZZER);
-  // delay(1000);
   PT_END(pt);
 }
 
@@ -160,6 +175,7 @@ void setup() {
   Serial.begin(9600);
   Serial1.begin(115200);
   lcd.begin(16, 2);
+  pinMode(BTN, INPUT);
 
   PT_INIT(&pt_taskSerialEvent);
   PT_INIT(&pt_taskSendSerial);
@@ -168,6 +184,7 @@ void setup() {
   PT_INIT(&pt_taskGas);
   PT_INIT(&pt_taskTemp);
   PT_INIT(&pt_taskBeep);
+  PT_INIT(&pt_taskHumid);
 }
 
 void loop() {
@@ -178,4 +195,5 @@ void loop() {
   taskSmoke(&pt_taskSmoke);
   taskGas(&pt_taskGas);
   taskTemp(&pt_taskTemp);
+  taskHumid(&pt_taskHumid);
 }
